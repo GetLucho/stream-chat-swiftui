@@ -58,7 +58,7 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
                             listId: viewModel.listId,
                             isMessageThread: viewModel.isMessageThread,
                             shouldShowTypingIndicator: viewModel.shouldShowInlineTypingIndicator,
-                            bottomInset: composerPlacement == .floating ? floatingComposerHeight - (keyboardShown ? bottomPadding : 0) : 0,
+                            bottomInset: floatingComposerMessageListBottomInset,
                             scrollPosition: $viewModel.scrollPosition,
                             loadingNextMessages: viewModel.loadingNextMessages,
                             firstUnreadMessageId: $viewModel.firstUnreadMessageId,
@@ -187,7 +187,7 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
         }
         .onPreferenceChange(FloatingComposerHeightPreferenceKey.self) { value in
             guard composerPlacement == .floating, value > 0 else { return }
-            floatingComposerHeight = value + bottomPadding
+            floatingComposerHeight = value
         }
         .navigationBarTitleDisplayMode(utils.messageListConfig.navigationBarDisplayMode)
         .onReceive(keyboardWillChangePublisher, perform: { visible in
@@ -250,6 +250,20 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
     
     private var composerPlacement: ComposerPlacement {
         factory.styles.composerPlacement
+    }
+
+    /// Inset under the newest message for a floating composer: measured composer height plus any
+    /// padding applied outside ``MessageComposerView`` (not included in the preference), e.g. thread
+    /// layout with a tab bar. Omits duplicating the bottom safe-area inset that ``contentBottomPadding``
+    /// and system layout already account for (see issue #1381).
+    private var floatingComposerMessageListBottomInset: CGFloat {
+        guard composerPlacement == .floating else { return 0 }
+        if keyboardShown {
+            return floatingComposerHeight
+        }
+        let outsideMeasuredFrame = floatingComposerBottomPadding
+        let threadSafeAreaWhenNoTabBar = floatingComposerOwnsBottomPadding && !tabBarAvailable ? bottomPadding : 0
+        return floatingComposerHeight + outsideMeasuredFrame + threadSafeAreaWhenNoTabBar
     }
 
     private var generatingSnapshot: Bool {

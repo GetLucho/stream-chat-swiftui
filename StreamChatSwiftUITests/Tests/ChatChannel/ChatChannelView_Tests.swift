@@ -280,6 +280,47 @@ import XCTest
         // Then
         assertSnapshot(matching: view, as: .image(perceptualPrecision: precision))
     }
+
+    /// Floating composer (regular chrome, not Liquid Glass): regression for extra bottom band on the
+    /// transcript when safe-area padding is applied outside the message list (issue #1381).
+    func test_chatChannelView_floatingComposer_atRest_snapshot() {
+        // Given
+        let controller = ChatChannelController_Mock.mock(
+            channelQuery: .init(cid: .unique),
+            channelListQuery: nil,
+            client: chatClient
+        )
+        let mockChannel = ChatChannel.mock(cid: .unique, name: "Test channel")
+        var messages = [ChatMessage]()
+        for i in 0..<12 {
+            messages.append(
+                ChatMessage.mock(
+                    id: .unique,
+                    cid: mockChannel.cid,
+                    text: "Test \(i)",
+                    author: .mock(id: .unique, name: "Martin")
+                )
+            )
+        }
+        controller.simulateInitial(channel: mockChannel, messages: messages, state: .remoteDataFetched)
+
+        // When
+        let viewFactory = FloatingComposerTestViewFactory()
+        let view = NavigationView {
+            ScrollView {
+                ChatChannelView(
+                    viewFactory: viewFactory,
+                    channelController: controller
+                )
+                .frame(width: defaultScreenSize.width, height: defaultScreenSize.height - 64)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .applyDefaultSize()
+
+        // Then
+        assertSnapshot(matching: view, as: .image(perceptualPrecision: precision))
+    }
 }
 
 // MARK: - LiquidGlass Test ViewFactory
@@ -290,4 +331,15 @@ class LiquidGlassViewFactory: ViewFactory {
     public var styles = LiquidGlassStyles()
     
     init() {}
+}
+
+// MARK: - Floating composer snapshot harness
+
+private final class FloatingComposerTestViewFactory: ViewFactory {
+    @Injected(\.chatClient) var chatClient
+    var styles = DefaultTestStyles()
+
+    init() {
+        styles.composerPlacement = .floating
+    }
 }
