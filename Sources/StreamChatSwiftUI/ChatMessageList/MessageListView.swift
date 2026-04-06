@@ -410,6 +410,18 @@ public struct MessageListView<Factory: ViewFactory>: View, KeyboardReadable {
             )
         )
         .modifier(factory.styles.makeMessageListContainerModifier(options: MessageListContainerModifierOptions()))
+        .onAppear {
+            debugLogMessageListInsets(reason: "onAppear")
+        }
+        .onChange(of: bottomInset) { _ in
+            debugLogMessageListInsets(reason: "bottomInsetChanged")
+        }
+        .onChange(of: showScrollToLatestButton) { _ in
+            debugLogMessageListInsets(reason: "scrollToLatestButtonChanged")
+        }
+        .onChange(of: messages.count) { _ in
+            debugLogMessageListInsets(reason: "messageCountChanged")
+        }
         .onDisappear {
             messageRenderingUtil.update(previousTopMessage: nil)
         }
@@ -508,6 +520,22 @@ public struct MessageListView<Factory: ViewFactory>: View, KeyboardReadable {
         } else {
             onLongPress(messageDisplayInfo)
         }
+    }
+
+    private func debugLogMessageListInsets(reason: String) {
+#if DEBUG
+        let fields = [
+            "reason=\(reason)",
+            "bottomInset=\(bottomInset)",
+            "newestMessageId=\(messages.first?.id ?? "nil")",
+            "messageCount=\(messages.count)",
+            "isMessageThread=\(isMessageThread)",
+            "shouldShowTypingIndicator=\(shouldShowTypingIndicator)",
+            "showScrollToLatestButton=\(showScrollToLatestButton)",
+            "scrollToBottomButtonOffset=\(showScrollToLatestButton ? -bottomInset : 0)"
+        ]
+        log.debug("[FloatingComposerDebug][MessageListView] \(fields.joined(separator: " "))")
+#endif
     }
 }
 
