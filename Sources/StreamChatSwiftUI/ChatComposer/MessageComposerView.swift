@@ -349,12 +349,14 @@ public struct MessageComposerView<Factory: ViewFactory>: View, KeyboardReadable 
     }
 
     /// Reserve only the visible floating-composer overlap in the message list.
-    /// When the attachment picker is collapsed, the outer VStack still contributes
-    /// its inter-item spacing to `composerHeight`, which leaves a dead band under
-    /// the latest message. Exclude that spacing from the published inset height.
+    /// The measured composer frame includes transparent top padding above the
+    /// controls and, when the attachment picker is collapsed, the outer VStack's
+    /// inter-item spacing as well. Exclude both from the published inset height
+    /// so the latest message can sit directly under the visible floating chrome.
     private var floatingComposerInsetHeight: CGFloat {
+        let transparentTopPadding = tokens.spacingMd
         let collapsedAttachmentPickerSpacing = viewModel.overlayShown ? 0 : tokens.spacingSm
-        return max(0, composerHeight - collapsedAttachmentPickerSpacing)
+        return max(0, composerHeight - transparentTopPadding - collapsedAttachmentPickerSpacing)
     }
 
     private var lockedLockOffset: CGFloat {

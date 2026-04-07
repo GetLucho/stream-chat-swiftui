@@ -360,8 +360,7 @@ private extension ChatChannelView {
         let tokens = InjectedValues[\.tokens]
         let baseHeight = utils.composerConfig.inputViewMinHeight
         let inputVerticalPadding = tokens.spacingXxs * 2
-        let floatingComposerTopPadding = tokens.spacingMd
-        return baseHeight + inputVerticalPadding + floatingComposerTopPadding
+        return baseHeight + inputVerticalPadding
     }
 }
 
