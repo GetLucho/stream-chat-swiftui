@@ -60,6 +60,7 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
                             isMessageThread: viewModel.isMessageThread,
                             shouldShowTypingIndicator: viewModel.shouldShowInlineTypingIndicator,
                             bottomInset: floatingComposerMessageListBottomInset,
+                            scrollButtonBottomInset: floatingComposerScrollButtonBottomInset,
                             scrollPosition: $viewModel.scrollPosition,
                             loadingNextMessages: viewModel.loadingNextMessages,
                             firstUnreadMessageId: $viewModel.firstUnreadMessageId,
@@ -271,11 +272,26 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
     private var floatingComposerMessageListBottomInset: CGFloat {
         guard composerPlacement == .floating else { return 0 }
         if keyboardShown {
-            return floatingComposerHeight
+            return floatingComposerScrollButtonBottomInset
+        }
+        return floatingComposerExtraBottomInset
+    }
+
+    /// The scroll-to-bottom button should keep clearing the floating composer itself even when the
+    /// transcript is allowed to underlap at rest.
+    private var floatingComposerScrollButtonBottomInset: CGFloat {
+        guard composerPlacement == .floating else { return 0 }
+        return floatingComposerHeight + floatingComposerExtraBottomInset
+    }
+
+    private var floatingComposerExtraBottomInset: CGFloat {
+        guard composerPlacement == .floating else { return 0 }
+        if keyboardShown {
+            return floatingComposerBottomPadding
         }
         let outsideMeasuredFrame = floatingComposerBottomPadding
         let threadSafeAreaWhenNoTabBar = floatingComposerOwnsBottomPadding && !tabBarAvailable ? bottomPadding : 0
-        return floatingComposerHeight + outsideMeasuredFrame + threadSafeAreaWhenNoTabBar
+        return outsideMeasuredFrame + threadSafeAreaWhenNoTabBar
     }
 
     private var generatingSnapshot: Bool {
@@ -332,6 +348,7 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
             "floatingComposerBottomPadding=\(floatingComposerBottomPadding)",
             "floatingComposerHeight=\(floatingComposerHeight)",
             "floatingComposerMessageListBottomInset=\(floatingComposerMessageListBottomInset)",
+            "floatingComposerScrollButtonBottomInset=\(floatingComposerScrollButtonBottomInset)",
             "isMessageThread=\(viewModel.isMessageThread)",
             "messageCount=\(viewModel.messages.count)"
         ]

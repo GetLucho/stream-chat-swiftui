@@ -26,6 +26,7 @@ public struct MessageListView<Factory: ViewFactory>: View, KeyboardReadable {
     var isMessageThread: Bool
     var shouldShowTypingIndicator: Bool
     var bottomInset: CGFloat
+    var scrollButtonBottomInset: CGFloat
 
     var onMessageAppear: (Int, ScrollDirection) -> Void
     var onScrollToBottom: @MainActor () -> Void
@@ -78,6 +79,7 @@ public struct MessageListView<Factory: ViewFactory>: View, KeyboardReadable {
         isMessageThread: Bool = false,
         shouldShowTypingIndicator: Bool = false,
         bottomInset: CGFloat = 0,
+        scrollButtonBottomInset: CGFloat = 0,
         scrollPosition: Binding<String?> = .constant(nil),
         loadingNextMessages: Bool = false,
         firstUnreadMessageId: Binding<MessageId?> = .constant(nil),
@@ -99,6 +101,7 @@ public struct MessageListView<Factory: ViewFactory>: View, KeyboardReadable {
         self.onJumpToMessage = onJumpToMessage
         self.shouldShowTypingIndicator = shouldShowTypingIndicator
         self.bottomInset = bottomInset
+        self.scrollButtonBottomInset = scrollButtonBottomInset
         self.loadingNextMessages = loadingNextMessages
         _scrolledId = scrolledId
         _showScrollToLatestButton = showScrollToLatestButton
@@ -145,6 +148,7 @@ public struct MessageListView<Factory: ViewFactory>: View, KeyboardReadable {
             isMessageThread: viewModel.isMessageThread,
             shouldShowTypingIndicator: viewModel.shouldShowInlineTypingIndicator,
             bottomInset: 0,
+            scrollButtonBottomInset: 0,
             scrollPosition: Binding(
                 get: { viewModel.scrollPosition },
                 set: { viewModel.scrollPosition = $0 }
@@ -374,7 +378,7 @@ public struct MessageListView<Factory: ViewFactory>: View, KeyboardReadable {
                         identity: ButtonOverlayTransitionModifier(opacity: 1, offset: 0)
                     )
                 )
-                .offset(y: -bottomInset)
+                .offset(y: -scrollButtonBottomInset)
             }
         }
         .onReceive(keyboardDidChangePublisher) { visible in
@@ -532,7 +536,8 @@ public struct MessageListView<Factory: ViewFactory>: View, KeyboardReadable {
             "isMessageThread=\(isMessageThread)",
             "shouldShowTypingIndicator=\(shouldShowTypingIndicator)",
             "showScrollToLatestButton=\(showScrollToLatestButton)",
-            "scrollToBottomButtonOffset=\(showScrollToLatestButton ? -bottomInset : 0)"
+            "scrollButtonBottomInset=\(scrollButtonBottomInset)",
+            "scrollToBottomButtonOffset=\(showScrollToLatestButton ? -scrollButtonBottomInset : 0)"
         ]
         log.debug("[FloatingComposerDebug][MessageListView] \(fields.joined(separator: " "))")
 #endif
