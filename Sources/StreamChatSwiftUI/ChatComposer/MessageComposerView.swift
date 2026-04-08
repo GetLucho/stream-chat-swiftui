@@ -327,7 +327,7 @@ public struct MessageComposerView<Factory: ViewFactory>: View, KeyboardReadable 
             }
             viewModel.pickerTypeState = .expanded(.none)
         }
-        .preference(key: FloatingComposerHeightPreferenceKey.self, value: composerHeight)
+        .preference(key: FloatingComposerHeightPreferenceKey.self, value: floatingComposerInsetHeight)
         .accessibilityElement(children: .contain)
     }
 
@@ -346,6 +346,15 @@ public struct MessageComposerView<Factory: ViewFactory>: View, KeyboardReadable 
 
     private var currentDragLocation: CGPoint {
         viewModel.recordingGestureLocation
+    }
+
+    /// Reserve only the visible floating-composer overlap in the transcript.
+    /// The measured frame includes the transparent top inset above the controls
+    /// and, when the attachment picker is collapsed, the VStack spacing below it.
+    private var floatingComposerInsetHeight: CGFloat {
+        let transparentTopPadding = tokens.spacingMd
+        let collapsedAttachmentPickerSpacing = viewModel.overlayShown ? 0 : tokens.spacingSm
+        return max(0, composerHeight - transparentTopPadding - collapsedAttachmentPickerSpacing)
     }
 
     private var lockedLockOffset: CGFloat {

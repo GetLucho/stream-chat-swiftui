@@ -404,9 +404,10 @@ public enum ComposerPlacement {
 private extension ChatChannelView {
     static func defaultFloatingComposerHeight() -> CGFloat {
         let utils = InjectedValues[\.utils]
+        let tokens = InjectedValues[\.tokens]
         let baseHeight = utils.composerConfig.inputViewMinHeight
-        let spacing: CGFloat = 60
-        return baseHeight + spacing
+        let inputVerticalPadding = tokens.spacingXxs * 2
+        return baseHeight + inputVerticalPadding
     }
 }
 
