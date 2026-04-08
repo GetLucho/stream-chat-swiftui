@@ -10,6 +10,7 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
     @Injected(\.colors) private var colors
     @Injected(\.utils) private var utils
     @Injected(\.chatClient) private var chatClient
+    @Environment(\.self) private var environment
 
     @StateObject private var viewModel: ChatChannelViewModel
 
@@ -58,7 +59,7 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
                             listId: viewModel.listId,
                             isMessageThread: viewModel.isMessageThread,
                             shouldShowTypingIndicator: viewModel.shouldShowInlineTypingIndicator,
-                            bottomInset: composerPlacement == .floating ? floatingComposerHeight - (keyboardShown ? bottomPadding : 0) : 0,
+                            bottomInset: composerPlacement == .floating ? floatingComposerHeight - (keyboardShown ? floatingComposerBottomSafeAreaCompensation : 0) : 0,
                             scrollPosition: $viewModel.scrollPosition,
                             loadingNextMessages: viewModel.loadingNextMessages,
                             firstUnreadMessageId: $viewModel.firstUnreadMessageId,
@@ -187,7 +188,7 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
         }
         .onPreferenceChange(FloatingComposerHeightPreferenceKey.self) { value in
             guard composerPlacement == .floating, value > 0 else { return }
-            floatingComposerHeight = value + bottomPadding
+            floatingComposerHeight = value + floatingComposerBottomSafeAreaCompensation
         }
         .navigationBarTitleDisplayMode(utils.messageListConfig.navigationBarDisplayMode)
         .onReceive(keyboardWillChangePublisher, perform: { visible in
@@ -220,7 +221,7 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
                 .allowsHitTesting(false)
         )
         .padding(.bottom, contentBottomPadding)
-        .ignoresSafeArea(.container, edges: tabBarAvailable ? .bottom : [])
+        .ignoresSafeArea(.container, edges: shouldIgnoreBottomContainerSafeArea ? .bottom : [])
         .alertBanner(isPresented: $viewModel.showAlertBanner)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("ChatChannelView")
@@ -264,11 +265,28 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
         topVC()?.view.safeAreaInsets.bottom ?? 0
     }
 
+    /// iOS 26 tab view bottom accessories already participate in the system's
+    /// bottom layout model. For floating composers, adding our legacy tab-bar
+    /// compensation on top creates an extra band under the composer.
+    private var floatingComposerUsesAccessoryManagedBottomLayout: Bool {
+        guard composerPlacement == .floating else { return false }
+        guard #available(iOS 26, *) else { return false }
+        return environment.tabViewBottomAccessoryPlacement != nil
+    }
+
+    private var shouldIgnoreBottomContainerSafeArea: Bool {
+        tabBarAvailable && !floatingComposerUsesAccessoryManagedBottomLayout
+    }
+
+    private var floatingComposerBottomSafeAreaCompensation: CGFloat {
+        shouldIgnoreBottomContainerSafeArea ? bottomPadding : 0
+    }
+
     /// Whether bottom safe-area compensation is needed.
     /// When the tab bar is visible the bottom safe area is ignored,
     /// so we must add padding manually — unless the keyboard already provides it.
     private var needsBottomSafeAreaPadding: Bool {
-        !keyboardShown && tabBarAvailable
+        !keyboardShown && shouldIgnoreBottomContainerSafeArea
     }
 
     /// Whether the floating composer should own the bottom safe-area padding
