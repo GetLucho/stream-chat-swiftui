@@ -19,6 +19,10 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
     @State private var messageDisplayInfo: MessageDisplayInfo?
     @State private var keyboardShown = false
     @State private var tabBarAvailable: Bool = false
+    @State private var observedTabBarHidden = false
+    @State private var observedTabBarHeight: CGFloat = 0
+    @State private var observedTabBarAlpha: CGFloat = 0
+    @State private var measuredFloatingComposerPreferenceHeight: CGFloat = 0
     @State private var floatingComposerHeight: CGFloat
     
     private var factory: Factory
@@ -189,11 +193,14 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
         }
         .onPreferenceChange(FloatingComposerHeightPreferenceKey.self) { value in
             guard composerPlacement == .floating, value > 0 else { return }
+            measuredFloatingComposerPreferenceHeight = value
             floatingComposerHeight = value + floatingComposerBottomSafeAreaCompensation
+            debugLogFloatingComposerLayout(reason: "floatingComposerHeightPreferenceChanged")
         }
         .navigationBarTitleDisplayMode(utils.messageListConfig.navigationBarDisplayMode)
         .onReceive(keyboardWillChangePublisher, perform: { visible in
             keyboardShown = visible
+            debugLogFloatingComposerLayout(reason: "keyboardVisibilityChanged")
         })
         .onReceive(NotificationCenter.default.publisher(
             for: NSNotification.Name(dismissChannel)
@@ -205,17 +212,31 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
             if utils.messageListConfig.becomesFirstResponderOnOpen {
                 keyboardShown = true
             }
+            debugLogFloatingComposerLayout(reason: "onAppear")
         }
         .onDisappear {
             viewModel.onViewDissappear()
             viewModel.reactionsShown = false
             messageDisplayInfo = nil
         }
+        .onChange(of: tabBarAvailable) { _ in
+            debugLogFloatingComposerLayout(reason: "tabBarAvailabilityChanged")
+        }
+        .onChange(of: viewModel.messages.count) { _ in
+            debugLogFloatingComposerLayout(reason: "messageCountChanged")
+        }
+        .onChange(of: floatingComposerAccessoryPlacementDescription) { _ in
+            debugLogFloatingComposerLayout(reason: "accessoryPlacementChanged")
+        }
         .background(
             Color(factory.styles.composerPlacement == .docked ? colors.backgroundCoreElevation1 : .clear)
                 .background(
-                    TabBarAccessor { _ in
+                    TabBarAccessor { tabBar in
                         tabBarAvailable = utils.messageListConfig.handleTabBarVisibility
+                        observedTabBarHidden = tabBar.isHidden
+                        observedTabBarHeight = tabBar.bounds.height
+                        observedTabBarAlpha = tabBar.alpha
+                        debugLogFloatingComposerLayout(reason: "tabBarAccessorCallback")
                     }
                 )
                 .ignoresSafeArea(.all)
@@ -275,6 +296,11 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
         return environment.tabViewBottomAccessoryPlacement != nil
     }
 
+    private var floatingComposerAccessoryPlacementDescription: String {
+        guard #available(iOS 26, *) else { return "unavailable" }
+        return String(describing: environment.tabViewBottomAccessoryPlacement)
+    }
+
     private var shouldIgnoreBottomContainerSafeArea: Bool {
         tabBarAvailable && !floatingComposerUsesAccessoryManagedBottomLayout
     }
@@ -324,6 +350,35 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
     private var floatingComposerScrollButtonBottomInset: CGFloat {
         guard composerPlacement == .floating else { return 0 }
         return floatingComposerHeight - (keyboardShown ? floatingComposerBottomSafeAreaCompensation : 0)
+    }
+
+    private func debugLogFloatingComposerLayout(reason: String) {
+#if DEBUG
+        guard composerPlacement == .floating else { return }
+        let fields = [
+            "reason=\(reason)",
+            "handleTabBarVisibility=\(utils.messageListConfig.handleTabBarVisibility)",
+            "tabBarAvailable=\(tabBarAvailable)",
+            "observedTabBarHidden=\(observedTabBarHidden)",
+            "observedTabBarHeight=\(observedTabBarHeight)",
+            "observedTabBarAlpha=\(observedTabBarAlpha)",
+            "keyboardShown=\(keyboardShown)",
+            "bottomPadding=\(bottomPadding)",
+            "contentBottomPadding=\(contentBottomPadding)",
+            "floatingComposerBottomPadding=\(floatingComposerBottomPadding)",
+            "measuredFloatingComposerPreferenceHeight=\(measuredFloatingComposerPreferenceHeight)",
+            "floatingComposerHeight=\(floatingComposerHeight)",
+            "floatingComposerBottomSafeAreaCompensation=\(floatingComposerBottomSafeAreaCompensation)",
+            "shouldIgnoreBottomContainerSafeArea=\(shouldIgnoreBottomContainerSafeArea)",
+            "floatingComposerUsesAccessoryManagedBottomLayout=\(floatingComposerUsesAccessoryManagedBottomLayout)",
+            "floatingComposerAccessoryPlacement=\(floatingComposerAccessoryPlacementDescription)",
+            "floatingComposerMessageListBottomInset=\(floatingComposerMessageListBottomInset)",
+            "floatingComposerScrollButtonBottomInset=\(floatingComposerScrollButtonBottomInset)",
+            "isMessageThread=\(viewModel.isMessageThread)",
+            "messageCount=\(viewModel.messages.count)"
+        ]
+        log.debug("[FloatingComposerDebug][ChatChannelView] \(fields.joined(separator: " "))")
+#endif
     }
 
     private func hideComposerCommandsAndAttachmentsPicker() {
