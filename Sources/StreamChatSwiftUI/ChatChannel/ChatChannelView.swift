@@ -301,8 +301,12 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
         return String(describing: environment.tabViewBottomAccessoryPlacement)
     }
 
+    private var observedTabBarVisible: Bool {
+        !observedTabBarHidden && observedTabBarHeight > 0 && observedTabBarAlpha > 0.01
+    }
+
     private var shouldIgnoreBottomContainerSafeArea: Bool {
-        tabBarAvailable && !floatingComposerUsesAccessoryManagedBottomLayout
+        tabBarAvailable && observedTabBarVisible && !floatingComposerUsesAccessoryManagedBottomLayout
     }
 
     private var floatingComposerBottomSafeAreaCompensation: CGFloat {
@@ -362,6 +366,7 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
             "observedTabBarHidden=\(observedTabBarHidden)",
             "observedTabBarHeight=\(observedTabBarHeight)",
             "observedTabBarAlpha=\(observedTabBarAlpha)",
+            "observedTabBarVisible=\(observedTabBarVisible)",
             "keyboardShown=\(keyboardShown)",
             "bottomPadding=\(bottomPadding)",
             "contentBottomPadding=\(contentBottomPadding)",
