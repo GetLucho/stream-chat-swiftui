@@ -59,7 +59,8 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
                             listId: viewModel.listId,
                             isMessageThread: viewModel.isMessageThread,
                             shouldShowTypingIndicator: viewModel.shouldShowInlineTypingIndicator,
-                            bottomInset: composerPlacement == .floating ? floatingComposerHeight - (keyboardShown ? floatingComposerBottomSafeAreaCompensation : 0) : 0,
+                            bottomInset: floatingComposerMessageListBottomInset,
+                            scrollButtonBottomInset: floatingComposerScrollButtonBottomInset,
                             scrollPosition: $viewModel.scrollPosition,
                             loadingNextMessages: viewModel.loadingNextMessages,
                             firstUnreadMessageId: $viewModel.firstUnreadMessageId,
@@ -308,6 +309,21 @@ public struct ChatChannelView<Factory: ViewFactory>: View, KeyboardReadable {
     private var floatingComposerBottomPadding: CGFloat {
         guard needsBottomSafeAreaPadding, floatingComposerOwnsBottomPadding else { return 0 }
         return bottomPadding
+    }
+
+    /// Under iOS 26's accessory-managed layout, the transcript can sit flush with the
+    /// floating composer while the jump button still keeps its clearance above it.
+    private var floatingComposerMessageListBottomInset: CGFloat {
+        guard composerPlacement == .floating else { return 0 }
+        if floatingComposerUsesAccessoryManagedBottomLayout && !keyboardShown {
+            return 0
+        }
+        return floatingComposerScrollButtonBottomInset
+    }
+
+    private var floatingComposerScrollButtonBottomInset: CGFloat {
+        guard composerPlacement == .floating else { return 0 }
+        return floatingComposerHeight - (keyboardShown ? floatingComposerBottomSafeAreaCompensation : 0)
     }
 
     private func hideComposerCommandsAndAttachmentsPicker() {
